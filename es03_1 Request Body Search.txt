@@ -1,0 +1,393 @@
+#Allows you to add one or more sorts on specific fields
+#一般排序、多值字段排序、基于脚本计算的排序
+
+报错，不能对text类型的字段直接排序
+GET /bank/_search
+{
+  "sort": [
+    {
+      "state": {                 #face    #height      #size  
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+改成 state.keyword 就可以
+GET /bank/_search
+{
+  "sort": [
+    {
+      "state.keyword": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+
+#将 fielddata 设置为true
+PUT /bank2
+PUT /bank2/_mappings/account
+{
+  "properties": {
+    "registered" : {
+      "type": "date",
+      "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+    },
+    "state" : {
+      "type" : "text",
+      "fielddata": true
+    }
+  }
+}
+
+POST /bank2/account/_bulk
+{"index":{"_id":"1"}}
+{"account_number":1,"balance":39225,"firstname":"Amber","lastname":"Duke","age":32,"gender":"M","address":"880 Holmes Lane","employer":"Pyrami","email":"amberduke@pyrami.com","city":"Brogan","state":"IL",                                              "registered": "2019-04-25 00:10:40"}      
+{"index":{"_id":"6"}}                                                                                                                                                                                                                                    
+{"account_number":6,"balance":5686,"firstname":"Hattie","lastname":"Bond","age":36,"gender":"M","address":"671 Bristol Street","employer":"Netagy","email":"hattiebond@netagy.com","city":"Dante","state":"TN",                                           "registered": "2019-05-30 11:13:30"}
+{"index":{"_id":"13"}}  
+
+
+GET /bank2/_search
+{
+  "sort": [
+    {
+      "state": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+
+----------------------------------------------------------------------
+
+
+#sort mode
+
+#numbers字段是个数组，有多个值，怎么排序呢？                  #好几家店都有小姐姐，你回去哪家呢？你是不是也要做个排序啊，
+GET /numbers/_search
+
+GET /numbers/_search
+{
+  "sort": [
+    {
+      "numbers": {
+        "order": "asc",
+        "mode": "min"
+      }
+    }
+  ]
+}
+
+
+
+# sort script value
+GET /numbers/_search                                   #化妆后的   排序
+{
+  "sort": [
+    {
+      "_script" : {
+        "type" : "number",
+        "script" : {
+          "lang" : "painless",
+          "source" : "doc['numbers'].length"
+        },
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+
+
+
+=========================================================
+#分页 from/size 存在性能问题
+#第一页
+GET /bank/_search
+{
+  "sort": [
+    {
+      "account_number": {
+        "order": "asc"
+      }
+    }
+  ],
+  "from": 0, "size": 10
+}
+
+#第二页
+GET /bank/_search
+{
+  "sort": [
+    {
+      "account_number": {
+        "order": "asc"
+      }
+    }
+  ],
+  "from": 10, "size": 10
+}
+
+
+=======================================================
+#用search after解决深分页性能问题
+#第一页
+GET /bank/_search
+{
+  "size": 10,
+  "sort": [
+    {
+      "account_number": {
+        "order": "asc"
+      }
+    }
+  ]
+}
+
+
+#第二页
+GET /bank/_search
+{
+  "size": 10,
+  "sort": [
+    {
+      "account_number": {
+        "order": "asc"
+      }
+    }
+  ],
+  "search_after" : [13]
+}
+
+
+
+
+=======================================================
+#collapse 折叠
+
+GET /music_v11/_search
+{
+  "collapse": {
+    "field": "songName.keyword"
+  }
+}
+
+
+#两级折叠
+GET /music_v11/_search
+{
+  "collapse": {
+    "field": "songName.keyword",
+    "inner_hits" : {
+      "name" : "singers",
+      "collapse" : {
+        "field" : "singer.keyword"
+      },
+      "size" : 5
+    }
+  }
+}
+
+================================================
+#_souce 指定返回的字段 
+
+
+# true\false 指定是否返回_source
+GET /bank/_search?size=5
+{
+  "query": {
+    "match_all": {}
+  },
+  "_source": true
+}
+
+#明确指定要返回的字段
+GET /bank/_search
+{
+  "_source": ["address", "balance"]
+}
+
+#将两个字段排除在外
+GET /bank/_search
+{
+  "_source": {
+    "excludes": ["address", "balance"]
+  }
+}
+
+
+===========================================
+#stored_fields 
+
+#对于非store字段，没有任何意义
+
+PUT /songs_v20
+PUT /songs_v20/_mapping/classic
+{
+  "properties": {
+    "songName" : {"type": "text"},
+    "singer" : {"type": "keyword"},
+    "lyrics" : {
+      "type": "text",
+      "store": true
+    }
+  }
+}
+
+
+
+POST /songs_v20/classic
+{
+  "songName" : "could this be love",
+  "singer" : "James",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me"
+}
+
+
+
+GET /songs_v20/_search
+{
+  "_source": true,
+  "query": {
+    "match_all": {}
+  },
+  "stored_fields": ["songName", "singer", "lyrics"]
+}
+
+===========================================
+#   version 是否返回版本信息
+
+GET /bank/account/_search
+{
+  "query": {
+    "term": {
+      "_id": {
+        "value": "20"
+      }
+    }
+  },
+  "version": true
+}
+
+
+
+===========================================
+# script field 将字段计算后返回
+GET /bank/_search
+{
+  "_source": true,
+  "query": {
+    "term": {
+      "_id": {
+        "value": "20"
+      }
+    }
+  },
+  "script_fields": {
+    "age_2year_later": {
+      "script" : {
+        "lang": "painless",
+       "source" : "doc['age'].value + 2"
+      }
+    },
+    "age_2year_before" : {
+      "script" : {
+        "lang": "painless",
+       "source" : "doc['age'].value - 2"
+      }
+    }
+  }
+}
+
+===========================================
+#有评分太低的，
+GET /songs_v1/popular/_search
+{
+  "query": {
+    "match": {
+      "lyrics": "So many people all around the world"
+    }
+  }
+}
+
+
+#加上min_score 去掉评分低的
+GET /songs_v1/_search
+{
+  "query": {
+    "match": {
+      "lyrics": "so many people all around world"
+    }
+  },
+  "min_score" : 1
+}
+
+
+
+
+
+
+
+
+
+
+
+===========================================
+高亮
+
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "address": "green"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "address": {}
+    }
+  }
+}
+#当我们指定需要高亮显示时，返回结果时，就会在与搜索内容匹配的地方包裹一个标签
+
+#这个标签是可以替换掉的
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "address": "green"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "address": {
+        "pre_tags": "<strong>",
+        "post_tags": "</strong>"
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

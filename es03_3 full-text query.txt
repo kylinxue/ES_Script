@@ -1,0 +1,174 @@
+match query
+
+#GET /songs_v1/_search
+{
+  "query": {
+    "match": {
+      "lyrics": "All I need is someone who makes me wanna sing"
+    }
+  }
+}
+
+GET /songs_v1/_search
+{
+  "query": {
+    "match": {
+      "lyrics": {
+        "query": "All I need is someone who makes me wanna sing",
+        "operator": "and"
+      }
+    }
+  }
+}
+
+
+GET /songs_v1/_search
+{
+  "query": {
+    "match": {
+      "lyrics": {
+        "query": "All I need is somene who makes me wanna sing",
+        "operator": "and",
+        "fuzziness": 1
+      }
+    }
+  }
+}
+
+
+
+=========================================
+
+
+#match phrase query
+GET /songs_v1/_search
+{
+  "query": {
+    "match_phrase": {
+      "lyrics": "take me"
+    }
+  }
+}
+
+
+GET /songs_v1/popular/_search
+{
+  "query": {
+    "match_phrase": {
+      "songName": {
+        "query": "take your ",
+        "slop": 3
+      }
+    }
+  }
+}
+
+
+
+=========================================
+#match phrase prefix query
+
+GET /songs_v1/_search
+{
+  "query": {
+    "match_phrase_prefix": {
+      "songName": "take me"
+    }
+  }
+}
+
+
+=========================================
+#multi match query
+
+GET /songs_v1/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "take me to your heart",
+      "fields": ["songName", "lyrics"]
+    }
+  }
+}
+
+
+
+=========================================
+Common terms query
+
+GET /_search
+{
+    "query": {
+        "common": {
+            "message": {
+                "query": "this is bonsai cool",
+                
+                "cutoff_frequency": 0.001,
+                
+                "low_freq_operator" : "and",
+                
+                "high_freq_operator" : "and",
+                
+                "minimum_should_match": {
+                  "high_freq": 2,
+                  "low_freq": 2
+                }
+            }
+        }
+    }
+}
+
+
+=========================================
+
+#Query String query
+
+GET /bank/_search
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "content",
+            "query" : "address:(green OR street) AND gender:F"
+        }
+    }
+}
+
+
+=========================================
+#Simple uery String query
+GET /bank/_search
+{
+    "query": {
+        "simple_query_string" : {
+            "fields" : ["address"],
+            "query" : "street*"
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

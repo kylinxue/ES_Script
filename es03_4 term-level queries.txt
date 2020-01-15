@@ -1,0 +1,179 @@
+#term query
+GET /bank/_search
+{
+  "query": {
+    "term": {
+      "_id": {
+        "value": "50"
+      }
+    }
+  }
+}
+
+
+GET /bank/_search
+{
+  "query": {
+    "term": {
+      "firstname.keyword": {
+        "value": "Aurelia"
+      }
+    }
+  }
+}
+
+
+============================================
+#terms query
+
+GET /bank/_search
+{
+  "query": {
+    "terms": {
+      "age": [
+        40,
+        33
+      ]
+    }
+  }
+}
+
+============================================
+#Terms lookup
+
+GET /bank/_search
+{
+  "query": {
+    "terms": {
+      "age":{
+        "index" : "bank",
+        "type" : "account",
+        "id" : "6",
+        "path" : "age"
+      }
+    }
+  }
+}
+
+
+
+============================================
+#range query
+GET /bank/_search
+{
+  "query": {
+    "range": {
+      "age": {
+        "gte": 20,
+        "lte": 30
+      }
+    }
+  }
+}
+
+
+============================================
+#exists  query 
+
+GET /bank/_search
+{
+  "query": {
+    "exists": {
+      "field": "numbers"
+    }
+  }
+}
+
+
+#不包含某个字段的文档
+GET /bank/_search
+{
+  "query": {
+    "bool": {
+      "must_not": [
+        {
+          "exists": {
+            "field": "age"
+          }
+        }
+      ]
+    }
+  }
+}
+
+
+============================================
+#prefix  query
+
+GET /bank/_search
+{
+  "query": {
+    "prefix": {
+      "email.keyword": {
+        "value": "foster"
+      }
+    }
+  }
+}
+
+
+============================================
+#wildcard
+
+GET /bank/_search
+{
+  "query": {
+    "wildcard": {
+      "email.keyword": {
+        "value": "*fire*"
+      }
+    }
+  }
+}
+
+
+============================================
+#regexp query
+
+GET /_search
+{
+    "query": {
+        "regexp": {
+            "user": {
+                "value": "k.*y",
+                "flags" : "ALL",
+                "max_determinized_states": 10000,
+                "rewrite": "constant_score"
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

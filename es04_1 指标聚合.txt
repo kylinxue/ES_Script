@@ -1,0 +1,159 @@
+#max min avg sum
+# select max(age) from bank
+
+POST /bank/_search
+{
+  "size": 0,
+  "aggs": {
+    "max_age": {
+      "max": {
+        "field": "age"
+      }
+    }
+  }
+}
+
+
+
+
+=====================================================
+#计数
+
+# select count(age) from bank
+
+POST /bank/_count
+{
+  "query" : {
+    "match" : {
+      "age" : 24
+    }
+  }
+}
+
+--------------
+
+POST /bank/_search
+{
+  "query": {
+    "term": {
+      "age": {
+        "value": 24
+      }
+    }
+  },
+  "aggs": {
+    "age_count": {
+      "value_count": {
+        "field": "age"
+      }
+    }
+  }
+}
+
+
+--------------
+POST /bank/_search
+{
+  "aggs": {
+    "age_count": {
+      "cardinality": {
+        "field": "age"
+      }
+    }
+  }
+}
+
+
+
+=====================================================
+
+#对query 后的结果进行聚合
+
+POST /bank/_search
+{
+  "size": 0,
+  "query": {
+    "match": {
+      "address": "street"
+    }
+  },
+  "aggs": {
+    "max_age": {
+      "max": {
+        "field": "age"
+      }
+    }
+  }
+}
+
+============================================
+#聚合 脚本值
+
+POST /bank/_search?size=0
+{
+  "aggs": {
+    "avg_age_yearlater": {
+      "avg": {
+        "script": "doc.age.value + 1"
+      }
+    }
+  }
+}
+
+#指定field，用value取值
+POST /bank/_search?size=0
+{
+  "aggs": {
+    "max_age": {
+      "avg": {
+        "field": "age",
+        "script": {
+          "source" : "_value * 2"
+        }
+      }
+    }
+  }
+}
+
+
+============================================
+#percentile_ranks
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "TEST_NAME": {
+      "percentile_ranks": {
+        "field": "age",
+        "values": [
+          10,
+          24,
+          40
+        ]
+      }
+    }
+  }
+}
+
+
+#Percentiles
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "TEST_NAME": {
+      "percentiles": {
+        "field": "age",
+        "percents": [
+          1,
+          5,
+          25,
+          50,
+          75,
+          95,
+          99
+        ]
+      }
+    }
+  }
+}
+
+

@@ -1,0 +1,637 @@
+
+PUT /songs_v1
+
+put /songs_v1/_mappings/popular
+{
+  "properties":{
+    "songName": { "type": "text" },
+    "singer" : { "type" : "text" },
+    "lyrics" : { "type" : "text"}
+  }
+}
+
+
+
+索引数据
+歌名：take me to your heart
+歌手：Michael Learns To Rock
+歌词:Hiding from the rain and snow,Trying to forget but I won’t let go,Looking at a crowded street,Listening to my own heart beat,So many people all around the world,Tell me where do I find someone like you girl,Take me to your heart take me to your soul,Give me your hand before I’m old,Show me what love is - haven’t got a clue,Show me that wonders can be true,They say nothing lasts forever,We’re only here today,Love is now or never,Bring me far away,Take me to your heart take me to your soul,Give me your hand and hold me,Show me what love is - be my guiding star,It’s easy take me to your heart,Standing on a mountain high,Looking at the moon through a clear blue sky,I should go and see some friends,But they don’t really comprehend,Don’t need too much talking without saying anything,All I need is someone who makes me wanna sing,Take me to your heart take me to your soul,Give me your hand before I’m old,Show me what love is - haven’t got a clue,Show me that wonders can be true,They say nothing lasts forever,We’re only here today,Love is now or never,Bring me far away,Take me to your heart take me to your soul,Give me your hand and hold me,Show me what love is - be my guiding star,It’s easy take me to your heart,Take me to your heart take me to your soul,Give me your hand and hold me,Show me what love isbe my guiding star,It’s easy take me to your heart
+
+
+
+歌名：you are beautiful
+歌手：James Blunt
+歌词：My life is brilliant,My life is brilliant,My love is pure,I saw an angel.Of that I‘m sure.  ,She smiled at me on the subway.  ,She was with another man.  ,But I won‘t lose no sleep on that,Cause I‘ve got a plan,You‘re beautiful. You‘re beautiful,You‘re beautiful, it‘s true,I saw your face in a crowded place,And I don‘t know what to do,Cause I‘ll never be with you,Yeah, she caught my eye,As we walked on by,She could see from my face that I was,Fucking high,And I don‘t think that I‘ll see her again,But we shared a moment that will last till the end,You‘re beautiful. You‘re beautiful,You‘re beautiful, it‘s true,I saw your face in a crowded place ,And I don‘t know what to do,‘Cause I‘ll never be with you,La la la la, la la la la, la la la la  ,laaaaaa,You‘re beautiful. You‘re beautiful,You‘re beautiful, it‘s true,There must be an angel with a smile on her face ,When she thought up that I should be with you,But it‘s time to face the truth,I will never be with you
+
+
+
+POST /songs_v1/popular
+{
+  "songName" : "",
+  "singer" : "",
+  "lyrics" : ""
+}
+
+
+
+
+--------------------------
+数据准备好之后，我们就可以进行各种查询
+
+#按照歌手查询
+GET /songs_v1/_search?q=singer:james
+
+
+#按照歌名查询
+GET /songs_v1/_search?q=songName:your
+
+
+#按照歌词查询
+GET /songs_v1/_search?q=lyrics:"There must be an angel with a smile on her face"
+
+
+
+
+
+=================================================================
+#索引别名
+
+
+#指定别名
+PUT /songs_v1/_alias/music
+
+#通过别名查询数据
+GET /songs_v1/_search?q=songName:your
+
+
+
+
+#创建新的索引
+PUT /songs_v2
+
+
+#并将数据同步到这个新的 index
+
+
+#将alias指向新的 index
+POST /_aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "music_v2",
+        "alias": "music"
+      }
+    },
+    {
+      "remove": {
+        "index": "music_v1",
+        "alias": "music"
+      }
+    }
+  ]
+}
+
+
+
+
+
+#索引一条数据到
+POST /songs_v2/popular
+{
+  "songName" : "right here waiting",
+  "singer" : "Richard Marx",
+  "lyrics" : "Oceans apart day after day,And I slowly go insane,I hear your voice on the line,But it doesn't stop the pain,If I see you next to never,How can we say forever,Wherever you go,Whatever you do,I will be right here waiting for you,Whatever it takes,Or how my heart breaks,I will be right here waiting for you,I took for granted, all the times,That I though would last somehow,I hear the laughter, I taste the tears,But I can't get near you now,Oh, can't you see it baby,You've got me going crazy,Wherever you go,Whatever you do,I will be right here waiting for you,Whatever it takes,Or how my heart breaks,I will be right here waiting for you,I wonder how we can survive,This romance,But in the end if I'm with you,I'll take the chance,Oh, can't you see it baby,You've got me going crazy,Wherever you go,Whatever you do,I will be right here waiting for you,Whatever it takes,Or how my heart breaks,I will be right here waiting for you,waiting for you"
+}
+
+
+#songs alias已经指向了songs_v2,可以让它同时也指向songs_v1
+POST /_aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "songs_v1",
+        "alias": "songs"
+      }
+    }
+  ]
+}
+
+
+
+#把alias当视图使用
+POST /_aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "music_v1",
+        "alias": "music_james",
+        "filter": {
+          "match":{
+            "singer" : "James"
+          }
+        }
+      }
+    }
+  ]
+}
+
+
+
+
+===================================================================
+index操作
+===================================================================
+
+简单创建索引
+PUT /songs_V3
+
+
+删除索引
+DELETE /songs_v4
+
+------------------------
+创建索引，并配置shards、replicas
+PUT /songs_v4
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 2
+  }
+}
+
+
+获取settings
+GET /songs_v4/_settings
+
+
+index的配置分为两类：
+static： index.number_of_shards、index.shard.check_on_startup。。。
+dynamic：index.number_of_replicas
+
+修改settings
+PUT /songs_v4/_settings
+{
+  "number_of_replicas": 2
+}
+
+PUT /songs_v4/_settings
+{
+  "index.shard.check_on_startup" : true
+}
+
+
+关闭索引
+POST /songs_v1/_close
+
+开启索引
+POST /songs_v1/_open
+
+
+--------------------------------
+
+
+
+获取mappings
+GET /songs_v1/_mappings
+
+
+给索引添加映射
+不再赘述
+
+
+#删除mapping type
+curl -XDELETE 'http://192.168.90.131:9200/posts/_mappings/product'
+
+
+
+
+
+
+
+
+===================================================================
+document操作
+===================================================================
+
+
+
+#索引文档，显示指定文档id
+PUT /songs_v4/popular/5
+{
+  "songName" : "could this be love",
+  "singer" : "Jennifer Lopez",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me Like A Lady In Every Way,He Smiles And Warms Me Through Up The Day,Should I Tell Him I Love You Wish I Knew What To Say,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,The Way He Looks So Deep In My Eyes,Our Hearts Are So Warm I Just Wanna Cry,Then He's So Hardworking He Wants To Be Someone,Should I Tell Him That I Love You,What If He Doesn't Say It Too,I'm Getting So Nervous What Should I Do,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Will It Be My Turn,Two Hearts Beating Together As One,No More Loneliness,Only Love Laughter And Fun,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel"
+}
+
+#索引文档，随机生成文档id
+POST /songs_v4/popular
+{
+  "songName" : "could this be love",
+  "singer" : "Jennifer Lopez",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me Like A Lady In Every Way,He Smiles And Warms Me Through Up The Day,Should I Tell Him I Love You Wish I Knew What To Say,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,The Way He Looks So Deep In My Eyes,Our Hearts Are So Warm I Just Wanna Cry,Then He's So Hardworking He Wants To Be Someone,Should I Tell Him That I Love You,What If He Doesn't Say It Too,I'm Getting So Nervous What Should I Do,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Will It Be My Turn,Two Hearts Beating Together As One,No More Loneliness,Only Love Laughter And Fun,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel"
+}
+
+
+id有什么作用呢？
+
+#d
+更新文档：
+PUT /songs_v4/popular/5
+{
+  "songName" : "could this be love",
+  "singer" : "Jennifer Lopez1111",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me Like A Lady In Every Way,He Smiles And Warms Me Through Up The Day,Should I Tell Him I Love You Wish I Knew What To Say,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,The Way He Looks So Deep In My Eyes,Our Hearts Are So Warm I Just Wanna Cry,Then He's So Hardworking He Wants To Be Someone,Should I Tell Him That I Love You,What If He Doesn't Say It Too,I'm Getting So Nervous What Should I Do,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Will It Be My Turn,Two Hearts Beating Together As One,No More Loneliness,Only Love Laughter And Fun,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel"
+}
+
+
+
+根据id，明确查询某条数据
+GET /songs_v4/popular/5
+
+
+
+删除文档：
+DELETE /songs_v4/popular/5
+
+
+
+再次查询，不再有id为5的文档
+GET /songs_v4/popular/5
+
+
+搜索document：
+GET /songs_v4/_search?q=singer:Jennifer
+
+
+
+
+
+
+===================================================================
+映射
+===================================================================
+
+
+创建index后，指定Mapping
+PUT /books
+
+PUT /books/_mapping/science
+{
+  "properties": {
+    "bookName" : {"type": "text"},
+    "content" : {"type": "text"}
+  }
+}
+
+创建index时，
+PUT test
+{
+"mappings" : {
+        "type1" : {
+            "properties" : {
+                "field1" : { "type" : "text" }
+            }
+        }
+    }
+}
+
+
+修改映射
+curl -XPUT -H "Content-Type: application/json" 'http://192.168.90.131:9200/posts/_mappings/product' -d '
+{
+   "properties":{
+      "productName":{"type":"text"},
+      "price":{"type":"float"}
+   }
+}'
+
+
+
+#创建index，给定动态映射
+PUT /books
+
+
+PUT /books/_mapping/science
+{
+  "properties": {
+    "name" : { "type": "text" },
+    "author" : { "type": "text" }
+  }
+}
+
+
+
+
+GET /books/_mappings
+
+
+POST /books/science
+{
+  "content" : "this is the content of the book"
+}
+
+
+POST /books/science
+{
+  "for_child" : true
+}
+
+
+POST /books/science
+{
+  "publish_date" : "2018-01-01"
+}
+
+
+
+静态
+DELETE /teachers
+
+PUT /teachers
+
+PUT /teachers/_mappings/math
+{
+  "dynamic" : "strict",
+  "properties": {
+    "name" : { "type": "text"},
+    "gender" : { "type": "boolean"},
+    "book" : {
+      "type": "object",
+      "dynamic" : "strict"
+    }
+  }
+}
+
+#索引新字段报错
+POST /teachers/math
+{
+  "age" : 24
+}
+
+
+===================================================================
+映射
+===================================================================
+
+创建index后，指定Mapping
+PUT /books
+
+PUT /books/_mapping/science
+{
+  "properties": {
+    "bookName" : {"type": "text"},
+    "content" : {"type": "text"}
+  }
+}
+
+创建index时，
+PUT test
+{
+"mappings" : {
+        "type1" : {
+            "properties" : {
+                "field1" : { "type" : "text" }
+            }
+        }
+    }
+}
+
+
+修改映射
+curl -XPUT -H "Content-Type: application/json" 'http://192.168.90.131:9200/posts/_mappings/product' -d '
+{
+   "properties":{
+      "productName":{"type":"text"},
+      "price":{"type":"float"}
+   }
+}'
+
+
+
+#创建index，给定动态映射
+PUT /books
+
+
+PUT /books/_mapping/science
+{
+  "properties": {
+    "name" : { "type": "text" },
+    "author" : { "type": "text" }
+  }
+}
+
+
+
+
+GET /books/_mappings
+
+#索引新字段
+POST /books/science
+{
+  "content" : "this is the content of the book"
+}
+
+#索引新字段，bool类型
+POST /books/science
+{
+  "for_child" : true
+}
+
+#索引新字段date
+POST /books/science
+{
+  "publish_date" : "2018-01-01"
+}
+
+
+
+#静态 映射
+DELETE /teachers
+
+PUT /teachers
+
+PUT /teachers/_mappings/math
+{
+  "dynamic" : "strict",
+  "properties": {
+    "name" : { "type": "text"},
+    "gender" : { "type": "boolean"},
+    "book" : {
+      "type": "object",
+      "dynamic" : "strict"
+    }
+  }
+}
+
+POST /teachers/math
+{
+  "age" : 24
+}
+
+
+
+
+#songs_v7日期识别
+PUT /songs_v7/popular/7
+{
+  "publish_date" : "2019-02-02"
+}
+
+
+#禁止日期识别
+PUT /songs_v8
+{
+  "mappings": {
+        "popular": {
+            "properties": {
+                "songName":  { "type": "text"}
+            }
+        }
+    }
+}
+
+PUT /songs_v8/popular/7
+{
+  "publish_date" : "2019-02-02"
+}
+
+
+
+
+_uid        包含_type 和 _id 的混合字段
+GET songs_v1/_search
+{
+  "query": {
+    "terms": {
+      "_uid": [
+        "popular#rX3so2wB8B_4uLnN1Pp8"
+      ]
+    }
+  }
+}
+
+
+GET songs_v1,songs_v2/_search
+{
+  "sort": [
+    {
+      "_uid": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+----------------------------------
+
+
+_source        文档的原始JSON字符串
+#      默认是开启的，可以通过entabled字段将其关闭
+PUT songs_v9
+{
+  "mappings": {
+    "popular" : {
+      "_source" : {
+        "enabled" : false
+      }
+    }
+  }
+}
+
+
+PUT /songs_v9/popular/5
+{
+  "songName" : "could this be love",
+  "singer" : "James",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me Like A Lady In Every Way,He Smiles And Warms Me Through Up The Day,Should I Tell Him I Love You Wish I Knew What To Say,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I"
+}
+
+
+GET /songs_v9/popular/5
+
+
+GET /songs_v1/_search
+
+
+-------------------------------------
+
+
+
+
+#   _all         
+字段是把其他字段拼接起来的超级字段，所有内容用空格隔开，_all字段会被解析和索引，但不存储，当需要返回包含某个关键字的文档，但不明确根据哪个字段搜索时，就可以对_all字段进行搜索
+
+#  _all 字段在 es6就被禁用了
+GET /songs_v1/_search
+{
+  "query": {
+    "match": {
+      "_all": "smiled"
+    }
+  }
+}
+
+
+
+PUT /songs_v10
+{
+  "mappings": {
+    "popular" : {
+      "properties" : {
+        "songName" : {
+          "type" : "text",
+          "copy_to": "allProp"
+        },
+        "singer" : {
+          "type" : "text",
+          "copy_to": "allProp"
+        },
+        "lyrics" : {
+          "type" : "text",
+          "copy_to": "allProp"
+        }
+      }
+    }
+  }
+}
+
+
+PUT /songs_v10/popular/5
+{
+  "songName" : "could this be love",
+  "singer" : "James",
+  "lyrics" : "Could This Be love,Woke Up This Morning Just Sat In My Bed,8 a.m. First Thing In My Head,Is A Certain Someone Who's Always On My Mind,He Treats Me Like A Lady In Every Way,He Smiles And Warms Me Through Up The Day,Should I Tell Him I Love You Wish I Knew What To Say,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,The Way He Looks So Deep In My Eyes,Our Hearts Are So Warm I Just Wanna Cry,Then He's So Hardworking He Wants To Be Someone,Should I Tell Him That I Love You,What If He Doesn't Say It Too,I'm Getting So Nervous What Should I Do,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Will It Be My Turn,Two Hearts Beating Together As One,No More Loneliness,Only Love Laughter And Fun,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel,So Strong So Deep And So Real,If I Lost You Would I Ever Heal,Could This Be Love That I Feel,Could This Be Love That I Feel"
+}
+
+
+GET /songs_v10/_search?q=allProp:turn
+
+
+
+
+#   _field_names 
+_field_names 字段用来索引文档所有的字段名称，null值字段的名称不被记录，这个字段用于exists 查询，
+现在，_field_names 仅仅索引 doc_value、norms 被disabled的字段名称，
+
+如果你有很多的字段将doc_values、norms 给 disabled掉了，并且不需要执行exist查询
+你可以将_field_names 给关闭
+
+PUT tweets
+{
+  "mappings": {
+    "_doc": {
+      "_field_names": {
+        "enabled": false
+      }
+    }
+  }
+}
+
+
+
+
+
+

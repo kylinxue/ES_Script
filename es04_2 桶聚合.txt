@@ -1,0 +1,204 @@
+
+
+#所处每种状态的用户的平均年龄     terms agg   组内再聚合
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "state_agg": {
+      "terms": {
+        "field": "state.keyword",
+        "order": {
+          "avg_age": "asc"
+        },
+        "size": 10
+      },
+      "aggs": {
+        "avg_age": {
+          "avg": {
+            "field": "age"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+#平均年龄小于30岁的状态            分组过滤
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "state_agg": {
+      "terms": {
+        "field": "state.keyword"
+      },
+      "aggs": {
+        "avg_age": {
+          "avg": {
+            "field": "age"
+          }
+        },
+        "having" : {
+          "bucket_selector": {
+            "buckets_path": {
+              "avg_age" : "avg_age"
+            },
+            "script": "params.avg_age < 30"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+ 
+
+#年龄为25岁的用户，男生、女生分别有多少人
+POST /bank/_search?size=0
+{
+  "aggs": {
+    "25yearold": {
+      "filter": {
+        "term": {
+          "age": 25
+        }
+      },
+      "aggs": {
+        "male_count": {
+          "filter": {
+            "term": {
+              "gender.keyword": "M"
+            }
+          }
+        },
+        "female_count" : {
+          "filter": {
+            "term": {
+              "gender.keyword": "F"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+#年龄为20、21、22岁的用户，分别有多少人
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "20_21_22": {
+      "filters": {
+        "filters": {
+          "21": {"term": {
+            "age": 21
+          }},
+          "22" : {"term": {
+            "age": 22
+          }},
+          "23" : { "term": {
+            "FIELD": 23
+          }}
+        }
+      }
+    }
+  }
+}
+
+#每个年龄段的男生用户多，还是女生用户多
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "age_range": {
+      "range": {
+        "field": "age",
+        "ranges": [
+          {"from": 10, "to": 20},
+          {"from": 20, "to": 30},
+          {"from": 30, "to": 40},
+          {"from": 40, "to": 50}
+        ]
+      },
+      "aggs": {
+        "genders": {
+          "terms": {
+            "field": "gender.keyword"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+#最近一个月，注册了多少用户
+POST /bank/_search?size=0
+{
+  "aggs": {
+    "month_recent": {
+      "date_range": {
+        "field": "registered",
+        "ranges": [
+          {
+            "from": "now-1M/M",
+            "to": "now"
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+
+
+#每个月注册用户量的曲线图
+POST /bank/_search?size=0
+{
+  "aggs": {
+    "MY_NAME": {
+      "date_histogram": {
+        "field": "registered",
+        "interval": "month"
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+#是否有人在同一个城市
+GET /bank/_search?size=0
+{
+  "aggs": {
+    "same_city": {
+      "terms": {
+        "field": "city.keyword",
+        "size": 10,
+        "order": {
+          "d_count": "desc"
+        }
+      },
+      "aggs": {
+        "d_count": {
+          "value_count": {
+            "field": "age"
+          }
+        }
+      }
+    }
+  }
+}
+
